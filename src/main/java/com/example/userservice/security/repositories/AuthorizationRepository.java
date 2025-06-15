@@ -1,4 +1,4 @@
-package com.example.userservice.security.models.repositories;
+package com.example.userservice.security.repositories;
 
 import com.example.userservice.security.models.Authorization;
 import org.springframework.data.jpa.repository.JpaRepository;
