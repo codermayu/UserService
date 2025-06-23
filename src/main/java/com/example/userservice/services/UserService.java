@@ -1,5 +1,6 @@
 package com.example.userservice.services;
 
+import com.example.userservice.dtos.SendEmailDTO;
 import com.example.userservice.exceptions.InvalidPasswordException;
 import com.example.userservice.exceptions.UserAlreadySignedUpException;
 import com.example.userservice.exceptions.UserNotPresentException;
@@ -7,7 +8,9 @@ import com.example.userservice.models.Token;
 import com.example.userservice.models.User;
 import com.example.userservice.repositories.TokenRepository;
 import com.example.userservice.repositories.UserRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -28,6 +31,12 @@ public class UserService implements IUserService{
     @Autowired
     private TokenRepository tokenRepository;
 
+    @Autowired
+    private KafkaTemplate<String, String> kafkaTemplate;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
     @Override
     public User signupUser(String email, String name, String password, Integer phoneNumber) {
         Optional<User> user = userRepository.findByEmail(email);
@@ -41,6 +50,10 @@ public class UserService implements IUserService{
         userEntity.setPassword(bCryptPasswordEncoder.encode(password));
         userEntity.setPhoneNumber(phoneNumber);
         userRepository.save(userEntity);
+
+        // Send a welcome email to the user
+        sendEmailToUser(email, name);
+
         return userEntity;
 
     }
@@ -80,6 +93,21 @@ public class UserService implements IUserService{
             return null; // Token has expired
         } else {
             return token.get().getUser(); // Token is valid and not expired
+        }
+    }
+
+    private void sendEmailToUser(String email, String name) {
+        SendEmailDTO sendEmailDTO = new SendEmailDTO();
+        sendEmailDTO.setToEmail(email);
+        sendEmailDTO.setToName(name);
+        sendEmailDTO.setSubject("Welcome to Our Application");
+        sendEmailDTO.setBody("Hello " + name + ",\n\nThank you for signing up!\n\nBest regards,\nYour App Team");
+
+        try {
+            String message = objectMapper.writeValueAsString(sendEmailDTO);
+            kafkaTemplate.send("email-send", message);
+        } catch (Exception e) {
+            e.printStackTrace(); // Handle the exception appropriately
         }
     }
 }
