@@ -37,6 +37,11 @@ public class UserController {
         return changeToUserDTO(userService.validateToken(token));
     }
 
+    @GetMapping("/validateEurekaCall/{token}")
+    public String validateEurekaCall (@PathVariable("token") String token) {
+        return "Validating Eureka call via: " + token;
+    }
+
     private UserDTO changeToUserDTO(User user){
         if (user == null){
             return null;
